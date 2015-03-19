@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 
-import services
-
+from controllers import SearchHandler, DownloadHandler
 from tornado.web import url
 
 
 urls = [
     url(
         '/(.*)/search',
-        services.SearchHandler,
+        SearchHandler,
         name='search_service'
     ),
     url(
         '/(.*)/download/(.*)',
-        services.DownloadHandler,
+        DownloadHandler,
         name='download_service'
     ),
 ]

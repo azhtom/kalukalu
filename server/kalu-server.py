@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import os
 import tornado
 import settings
+import redisco
 
 from urls import urls
 from tornado.options import define, options, parse_command_line
@@ -17,6 +19,8 @@ class Application(tornado.web.Application):
                  **settings):
         super(Application, self).__init__(handlers, default_host, transforms,
                                           **settings)
+
+        redisco.connection_setup(host='localhost', port=6380, db=10)
 
 
 if __name__ == '__main__':

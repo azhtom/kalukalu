@@ -7,31 +7,11 @@ class Genere(models.Model):
 
     name        = models.Attribute(required=True)
 
-    @staticmethod
-    def create(name):
-        generes = Genere.objects.filter(name=name)
-        if not generes:
-            genere = Genere()
-            genere.name = name
-            genere.save()
-        else: genere  = generes[0]
-        return genere
 
 class Artist(models.Model):
 
     name        = models.Attribute(required=True)
     bio         = models.Attribute()
-    created_at  = models.DateTimeField(auto_now_add=True)
-
-    @staticmethod
-    def create(name):
-        artists = Artist.objects.filter(name=name)
-        if not artists:
-            artist = Artist()
-            artist.name = name
-            artist.save()
-        else: artist = artists[0]
-        return artist
 
 
 class Album(models.Model):
@@ -40,37 +20,32 @@ class Album(models.Model):
     year        = models.Attribute()
     covert      = models.Attribute()
 
-    artist      = models.ReferenceField(Artist)
+    artist      = models.ReferenceField("Artist", related_name="artist")
 
     @staticmethod
-    def create(name, artist):
-        l = cont.TypedList('artists', 'Artist')
-        l.extend(Album.objects.filter(artist=artist, 
-            name=name.lower()))
-        print l
-        if not l:
-            print "preee"
-            album = Album(artist=artist)
+    def create(name, artist_id):
+        albums = Album.objects.filter(artist_id=artist_id, 
+            name=name.lower())
+        if not albums:
+            album = Album()
             album.name = name
-
-            print artist.id, "AAA"
-
-            album.artist = artist
+            album.artist_id = artist_id
             album.save()
-        else: album = l[0]
+        else: album = albums.first()
         return album
+
 
 class Song(models.Model):
 
-    source_id   = models.Attribute(required=True)
+    source      = models.Attribute(required=True)
     title       = models.Attribute(required=True)
     description = models.Attribute()
     duration    = models.IntegerField()
-    covert      = models.Attribute()
     cache_name  = models.Attribute()
+    tags        = models.ListField(unicode)
 
     artist      = models.ReferenceField(Artist, required=True)
-    album       = models.ReferenceField(Album)
+    album       = models.ReferenceField(Album, required=True)
     genere      = models.ReferenceField(Genere, required=True)
     
     # GS or YT slug

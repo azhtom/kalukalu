@@ -46,12 +46,17 @@ class JsonHandler(tornado.web.RequestHandler):
 class SearchHandler(JsonHandler):
 
     def get(self, slug):
-        print slug
         servname = settings.SERVICES.get(slug)
         if servname:
             q = self.get_argument('q')
-            service = utils.get_service_class(servname)
-            result = service().search(q)
+            service = utils.get_service_class(servname)()
+
+            result = service.search_in_cache(q)
+
+            if len(result) < 3:
+                service.connect()
+                result += service.search(q)
+
             self.response['songs'] = result
             return self.write_json()
         else:

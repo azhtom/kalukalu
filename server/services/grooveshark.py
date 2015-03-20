@@ -30,6 +30,7 @@ class GSService(services.BaseService):
     _session_id = None
     _UUID = None
     _CM_TOKEN = None
+    _SLUG_NAME = 'gs'
 
     def __init__(self, auto=True):
         self._session_id = binascii.b2a_hex(os.urandom(16))

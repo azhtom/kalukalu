@@ -1,44 +1,44 @@
 # -*- coding: utf8 -*-
 
-from models import Song
-
-song_id     = models.Attribute(required=True)
-    title       = models.Attribute(required=True)
-    description = models.Attribute()
-    duration    = models.IntegerField()
-    covert      = models.Attribute()
-
-    artist      = models.ReferenceField(Artist)
-    album       = models.ReferenceField(Album)
-    genere      = models.ReferenceField(Genere)
-    
-    # GS or YT slug
-    service     = models.Attribute(required=True)
-
-    created_at  = models.DateTimeField(auto_now_add=True)
+from models import Song, Album, Genere, Artist
 
 
- 
 class BaseService(object):
 
     def _prepare_song(self, _song):
 
         title = _song['SongName']
-        song_id = _song['SongID']
-        covert = _song['Covert']
+        source_id = _song['SongID']
+        covert = _song['CoverArtFilename']
 
-        artist_id = _song['ArtistID']
-        album_name = _song['ArtistID']
+        artist_name = _song['ArtistName']
+        album_name = _song['AlbumName']
 
-        songs = Song.objects.filter(song_id=song_id)
+        songs = Song.objects.filter(source_id=source_id)
+        song = Song(title=title, source_id=source_id, covert=covert)
 
-        if songs:
+        if not songs:
+            artist = Artist.create(name=artist_name)
+            
+            album = Album.create(name=album_name, artist=artist)
 
+            genere = Genere(name="Unknown")
+            Genere.create(genere)
+
+            song.artist = artist
+            song.album = album
+            song.genere = genere
+            song.genere = self._SLUG_NAME
+
+            song.save()
+
+        else: song = songs[0]
 
         return {
-            'name': song.title,
-            'artist_id': song['ArtistID'],
-            'song_id': song['SongID']
+            'title': song.title,
+            'artist_name': song.artist.name,
+            'artist_id': song.artist.id,
+            'song_id': song.id
         }
 
     def _song_response(self, results):

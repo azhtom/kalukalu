@@ -22,19 +22,36 @@ GS_CLIENTS = {
 
 GS_SERVICE_URL = 'https://grooveshark.com/more.php'
 GS_CROSSDOMAIN_URL = 'http://grooveshark.com/crossdomain.xml'
-GS_COUNTRY = {'ID': 169, 'CC1': 0, 'CC2': 0, 'CC3': 1099511627776, 'CC4': 0, 'DMA': 0, 'IPR': 0}
+GS_COUNTRY = {"CC1":"16384","CC3":"0","ID":"15","CC2":"0","CC4":"0"}
+
+
+class GSSession(object):
+    
+    id = None
+    uuid = None
+    
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(GSSession, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
 
 
 class GSService(services.BaseService):
 
-    _session_id = None
-    _UUID = None
+    session = None
     _CM_TOKEN = None
     _SLUG_NAME = 'gs'
 
     def __init__(self, auto=False):
-        self._session_id = binascii.b2a_hex(os.urandom(16))
-        self._UUID = str(uuid.uuid1())
+
+        self.session = GSSession()
+        if not self.session.id and not self.session.uuid:
+            print "new!"
+            self.session.id = binascii.b2a_hex(os.urandom(16))
+            self.session.uuid = str(uuid.uuid1())
+
         if auto:
             self.connect()
 
@@ -54,17 +71,17 @@ class GSService(services.BaseService):
     def _prepare_post(self, method, params, client='htmlshark'):
         data = {}
         data['header'] = {}
-        
+
         data['header']['client'] = client
         data['header']['clientRevision'] = GS_CLIENTS[client]['revision']
         data['header']['privacy'] = 0
-        data['header']['session'] = self._session_id
+        data['header']['session'] = self.session.id
         data['header']['country'] = GS_COUNTRY
 
         if self._CM_TOKEN:
             data['header']['token'] = self._gen_token_hash(method, client)
 
-        data['UUID'] = self._UUID
+        data['uuid'] = self.session.uuid
         data['method'] = method
 
         
@@ -73,7 +90,7 @@ class GSService(services.BaseService):
 
     def _get_secret_key(self):
         md5 = hashlib.md5()
-        md5.update(self._session_id)
+        md5.update(self.session.id)
         return md5.hexdigest()
 
     def _gen_token_hash(self, method, client):
@@ -88,13 +105,15 @@ class GSService(services.BaseService):
 
     def _get_stream_key(self, song_id):
         data = {
-            'mobile': False, 
-            'prefetch': False, 
+            'mobile': 'false', 
+            'prefetch': 'false', 
             'type': 0,
             'country': GS_COUNTRY,
             'songID': song_id
         }
         r = self._call('getStreamKeyFromSongIDEx', data)
+        print r.headers
+        print r.content, "STREAMKEY"
         return r.json().get('result')
 
     def _request_stream(self, song_id):
@@ -115,7 +134,7 @@ class GSService(services.BaseService):
             r = requests.post(uri, headers=headers, 
                 data=json.dumps(data))
             if r.status_code == requests.codes.ok:
-                return r
+                return r.content
         return None
 
     def connect(self):
@@ -137,23 +156,25 @@ class GSService(services.BaseService):
             return self._song_response(result.get('result').get('result'))
         return []
 
-    def download(self, song_id):
-        #stream = self._request_stream(song_id)
-        # search in redis by id 
-        # verify if cached
-        # if not cached we download the song for caching
-        # else: send song from cache
-        data = {}
+    def _get_media_file(self, gs_song_id):
+        """"
+            gs_song_id --> Grooveshark Song ID
+        """
+        #data = {
+        #    'client': 'jsqueue'
+        #}
+        #rcall = self._call('getCountry', data, 'jsqueue')
+        #print rcall.content, "xx"
 
-        return data
-
+        return self._request_stream(gs_song_id)
+        
 
 if __name__ == '__main__':
 
-    gs = GSService(False)
+    gs = GSService()
     gs.connect()
 
-    gs.search('fito paez')
+    #gs.search('fito paez')
 
-    #print gs.download('25076477')
+    print gs.download('25076477')
 

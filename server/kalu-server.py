@@ -20,7 +20,7 @@ class Application(tornado.web.Application):
         super(Application, self).__init__(handlers, default_host, transforms,
                                           **settings)
 
-        redisco.connection_setup(host='localhost', port=6379, db=6)
+        redisco.connection_setup(host='localhost', port=6379, db=11)
 
 
 if __name__ == '__main__':

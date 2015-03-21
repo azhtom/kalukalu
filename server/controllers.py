@@ -49,13 +49,19 @@ class SearchHandler(JsonHandler):
         servname = settings.SERVICES.get(slug)
         if servname:
             q = self.get_argument('q')
+            remote = self.get_argument('remote', 0)
+
             service = utils.get_service_class(servname)()
 
-            result = service.search_in_cache(q)
-
-            if len(result) < 3:
+            if remote == '1':
                 service.connect()
-                result += service.search(q)
+                result = service.search(q)
+            else:
+                result = service.search_in_cache(q)
+                if not result:
+                    service.connect()
+                    service.search(q)
+                    result = service.search_in_cache(q)
 
             self.response['songs'] = result
             return self.write_json()
@@ -63,17 +69,37 @@ class SearchHandler(JsonHandler):
             return self.write_error(404)
 
 
-class DownloadHandler(JsonHandler):
+class PlaySongHandler(JsonHandler):
 
     def get(self, slug, song_id):
         
         servname = settings.SERVICES.get(slug)
         if servname:
-            service = utils.get_service_class(servname)
-            result = service().download(song_id)
-            self.response['url'] = result
+            service = utils.get_service_class(servname)(True)
+            
+            result = service.get_song(song_id)
+
+            self.response = result
             return self.write_json()
         else:
             return self.write_error(404)
+
+
+class CacheHandler(tornado.web.RequestHandler):
+
+    def get(self, file_name):
+
+        full_path = '%s%s' % (settings.CACHE_PATH, file_name)
+
+        buf_size = 4096
+        self.set_header('Content-Type', 'audio/mpeg')
+        self.set_header('Content-Disposition', 'attachment; filename=' + file_name)
+        with open(full_path, 'r') as f:
+            while True:
+                data = f.read(buf_size)
+                if not data:
+                    break
+                self.write(data)
+        self.finish()
 
             

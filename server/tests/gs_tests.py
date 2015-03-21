@@ -23,9 +23,3 @@ class GSTest(unittest.TestCase):
             song = result[0]
             self.assertTrue(song is not None)
 
-    def download_test(self):
-        #song_id = '24338816'
-        #result = self.gs.download(song_id)
-        #self.assertTrue(result is not None)
-        pass
- 

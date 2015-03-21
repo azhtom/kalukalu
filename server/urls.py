@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from controllers import SearchHandler, DownloadHandler
+from controllers import SearchHandler, PlaySongHandler, CacheHandler
 from tornado.web import url
 
 
@@ -11,8 +11,13 @@ urls = [
         name='search_service'
     ),
     url(
-        '/(.*)/download/(.*)',
-        DownloadHandler,
-        name='download_service'
+        '/(.*)/play-song/(.*)',
+        PlaySongHandler,
+        name='play_song_service'
+    ),
+    url(
+        '/cache/(.*)',
+        CacheHandler,
+        name='cache_service'
     ),
 ]

@@ -1,6 +1,8 @@
 # -*- coding: utf8 -*-
 
 import re
+import uuid
+import settings
 
 from models import Song, Album, Genere, Artist
 
@@ -11,7 +13,6 @@ class BaseService(object):
         return {
             'song_id': song.id,
             'duration': song.duration,
-            '_id': song.source,
             'title': song.title.title(),
             'artist': {
                 'id': song.artist.id,
@@ -42,45 +43,62 @@ class BaseService(object):
                 genere_id=genere.id)
 
         if not song.source:
-            
             tags = []
             tags += re.sub("[^\w]", " ", artist.name.lower()).split()
             tags += re.sub("[^\w]", " ", album.name.lower()).split()
             tags += re.sub("[^\w]", " ", title.lower()).split()
-
-            tags = list(set([t for t in tags if len(t) > 2]))
 
             song.tags = tags
             song.service = self._SLUG_NAME
             song.duration = int(float(duration))
             song.source = source_id
 
-            print song.is_valid()
-            print song.save()
+            song.is_valid()
+            song.save()
 
         return self._song_to_json(song)
 
     def _song_response(self, results):
         return map(self._prepare_song, results)
 
+    def _save_song_in_cache(self, song):
+        binary_song = self._get_media_file(song.source)
+        if binary_song:
+            cache_name = str(uuid.uuid4()) + '.mp3'
+
+            full_path = '%s%s' % (settings.CACHE_PATH, cache_name)
+            _file = open(full_path, 'wb')
+            _file.write(binary_song)
+            _file.close()
+
+            song.cache_name = cache_name
+            song.save()
+
     def search_in_cache(self, query):
         """
             Search on local database
             TODO: improved search algorithm
         """
-        #rtists = Artist.objects.filter(name=query)
-
-        #for artist in artists:
-        #    _results += Song.objects.filter(artist_id=artist.id)
-
-        #if not _results:
         words = re.sub("[^\w]", " ", query.lower()).split()
-        _songs = []
+        songs = Song.objects.filter(tags=words[0])
 
-        for word in words:
-            if not _songs:
-                _songs = Song.objects.filter(tags=word)
-            else:
-                _songs = _songs.filter(tags=word)
+        results = [sg for sg in songs if (len(list(set(words) - set(sg.tags))) + .0) / len(sg.tags) == 0]
 
-        return map(self._song_to_json, _songs)
+        return map(self._song_to_json, results)
+
+    def get_song(self, song_id):
+        """
+            Search song and stored in cache
+        """
+        song = Song.objects.get_by_id(song_id)
+
+        if song:
+            if not song.cache_name:
+                print "sin nombre cache"
+                self._save_song_in_cache(song)
+            result = self._song_to_json(song)
+            result['media_url'] = '%s%s' % (settings.CACHE_URL, song.cache_name)
+            return result
+
+        return []
+

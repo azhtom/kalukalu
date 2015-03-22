@@ -6,8 +6,10 @@ import importlib
 import tornado.web
 import json
 
+from models import Song
 
-class JsonHandler(tornado.web.RequestHandler):
+
+class JsonResponse(tornado.web.RequestHandler):
     """
         Request handler where requests and responses speak JSON.
         From: https://gist.github.com/mminer/5464753
@@ -43,7 +45,15 @@ class JsonHandler(tornado.web.RequestHandler):
         self.write(output)
 
 
-class SearchHandler(JsonHandler):
+class DiscoverController(JsonResponse):
+
+    def get(self):
+
+        self.response = []
+        return self.write_json()
+    
+
+class SearchController(JsonResponse):
 
     def get(self, slug):
         servname = settings.SERVICES.get(slug)
@@ -69,14 +79,15 @@ class SearchHandler(JsonHandler):
             return self.write_error(404)
 
 
-class PlaySongHandler(JsonHandler):
+class PlaySongController(JsonResponse):
 
     def get(self, slug, song_id):
         
         servname = settings.SERVICES.get(slug)
         if servname:
-            service = utils.get_service_class(servname)(True)
-            
+            service = utils.get_service_class(servname)()
+            service.connect()
+
             result = service.get_song(song_id)
 
             self.response = result
@@ -85,7 +96,7 @@ class PlaySongHandler(JsonHandler):
             return self.write_error(404)
 
 
-class CacheHandler(tornado.web.RequestHandler):
+class CacheController(tornado.web.RequestHandler):
 
     def get(self, file_name):
 

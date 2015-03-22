@@ -20,7 +20,7 @@ class Album(models.Model):
     year        = models.Attribute()
     covert      = models.Attribute()
 
-    artist      = models.ReferenceField("Artist", related_name="artist")
+    artist      = models.ReferenceField('Artist', related_name='artist')
 
     @staticmethod
     def create(name, artist_id):

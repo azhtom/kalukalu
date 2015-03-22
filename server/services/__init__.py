@@ -94,11 +94,9 @@ class BaseService(object):
 
         if song:
             if not song.cache_name:
-                print "sin nombre cache"
                 self._save_song_in_cache(song)
             result = self._song_to_json(song)
             result['media_url'] = '%s%s' % (settings.CACHE_URL, song.cache_name)
             return result
-
         return []
 

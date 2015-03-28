@@ -8,6 +8,8 @@ import hashlib
 import requests
 import services
 
+from requests import Request
+
 
 GS_CLIENTS = {
     'htmlshark': {
@@ -17,24 +19,31 @@ GS_CLIENTS = {
     'jsqueue': {
         'token': 'chickenFingers',
         'revision': '20130520'
+    },
+    'jsplayer': {
+        'token': 'frenchFriedDogs',
+        'revision': '20120124.06'
     }
 }
 
 GS_SERVICE_URL = 'https://grooveshark.com/more.php'
 GS_CROSSDOMAIN_URL = 'http://grooveshark.com/crossdomain.xml'
-GS_COUNTRY = {"CC1":"16384","CC3":"0","ID":"15","CC2":"0","CC4":"0"}
+GS_COUNTRY = {'DMA': 0, 'CC1': 0, 'CC3': 1099511627776, 'CC4': 0, 'IPR': 0, 'ID': 169, 'CC2': 0}
 
 
 class GSSession(object):
     
     id = None
     uuid = None
+    token = None
     
     _instance = None
 
     def __init__(self):
-        self.id = binascii.b2a_hex(os.urandom(16))
-        self.uuid = str(uuid.uuid1())
+        if not self.id and not self.uuid:
+            self.id = binascii.b2a_hex(os.urandom(16))
+            self.uuid = str(uuid.uuid1())
+            print "SOY NUEVO"
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -45,7 +54,6 @@ class GSSession(object):
 class GSService(services.BaseService):
 
     session = None
-    _CM_TOKEN = None
     _SLUG_NAME = 'gs'
 
     def __init__(self):
@@ -80,7 +88,7 @@ class GSService(services.BaseService):
         data['header']['session'] = self.session.id
         data['header']['country'] = GS_COUNTRY
 
-        if self._CM_TOKEN:
+        if self.session.token:
             data['header']['token'] = self._gen_token_hash(method, client)
 
         data['uuid'] = self.session.uuid
@@ -109,13 +117,17 @@ class GSService(services.BaseService):
                 RANDOM CHARACTERS + SHA1 HASH
         """
         r6ch = binascii.b2a_hex(os.urandom(3))
-        tkn = '%s:%s:%s:%s' % (method, self._CM_TOKEN, GS_CLIENTS[client]['token'], r6ch)
+        tkn = '%s:%s:%s:%s' % (method, self.session.token, GS_CLIENTS[client]['token'], r6ch)
         return r6ch + hashlib.sha1(tkn).hexdigest()
 
     def _call(self, method, data, client='htmlshark'):
+        proxies = {
+            'http': 'grooveshark.com',
+            'http': 'tinysong.com'
+        }
         _data = self._prepare_call(method, data, client)
         return requests.post(GS_SERVICE_URL, headers=self._headers(), 
-            data=json.dumps(_data))
+            data=json.dumps(_data), proxies=proxies)
 
     def _get_stream_key(self, song_id):
         data = {
@@ -126,8 +138,7 @@ class GSService(services.BaseService):
             'songID': song_id
         }
         r = self._call('getStreamKeyFromSongIDEx', data)
-        print r.headers
-        print r.content, "STREAMKEY"
+        print r.headers, r.content
         return r.json().get('result')
 
     def _request_stream(self, song_id):
@@ -145,10 +156,24 @@ class GSService(services.BaseService):
             headers['Host'] = data['ip']
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
 
-            r = requests.post(uri, headers=headers, 
-                data=json.dumps(data))
-            if r.status_code == requests.codes.ok:
-                return r.content
+            req = Request('POST', uri,
+                data=json.dumps(data),
+                headers=headers
+            )
+ 
+            self._mark30s({
+                'songQueueSongID': 0, 
+                'songQueueID': 0,
+                'streamServerID': stream_key['streamServerID'],
+                'songID': song_id
+            })
+
+            return req.prepare()
+
+            #r = requests.post(uri, headers=headers, 
+            #    data=json.dumps(data))
+            #if r.status_code == requests.codes.ok:
+            #    return r.content
         return None
 
     def _get_media_file(self, gs_song_id):
@@ -157,16 +182,21 @@ class GSService(services.BaseService):
         """
         return self._request_stream(gs_song_id)
 
+    def _mark30s(self, data):
+        r = self._call('markStreamKeyOver30Seconds', data)
+
     def connect(self):
         """
             Connect to Grooveshark to receive a token.
             If result is None, it will be impossible to use the gs api.
         """
-        data = {'secretKey': self._get_secret_key()}
-        rcall = self._call('getCommunicationToken', data)
-        if rcall.status_code == requests.codes.ok:
-            if rcall.content:
-                self._CM_TOKEN = rcall.json().get('result')
+        print self.session.token, "TKN! CONNECT"
+        if not self.session.token:
+            data = {'secretKey': self._get_secret_key()}
+            rcall = self._call('getCommunicationToken', data)
+            if rcall.status_code == requests.codes.ok:
+                if rcall.content:
+                    self.session.token = rcall.json().get('result')
 
     def search(self, query):
         data = {'query': query, 'type': 'Songs', 'ppOverride': 'false', 'guts':0}
@@ -178,5 +208,5 @@ class GSService(services.BaseService):
         return []
 
     def is_conected(self):
-        return self._CM_TOKEN is not None
+        return self.session.token is not None
         

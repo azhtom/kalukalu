@@ -3,8 +3,51 @@
 import re
 import uuid
 import settings
+import sys
+import os
+import urllib
+import threading
+
 
 from models import Song, Album, Genere, Artist
+from Queue import Queue
+from requests import Session
+
+
+class Downloader(threading.Thread):
+    def __init__(self, queue, filename):
+        super(Downloader, self).__init__()
+        self.queue = queue
+        self.filename = filename
+        self.daemon = True
+
+    def run(self):
+        while True:
+            prepped = self.queue.get()
+            try:
+                self.download_song(prepped)
+            except Exception,e:
+                print "   Error: %s" % e
+            self.queue.task_done()
+
+    def download_song(self, prepped):
+        # change it to a different way if you require
+        print "[%s] Downloading -> %s"% (self.ident, self.filename)
+        s = Session()
+        binary_song = s.send(prepped)
+        _file = open(self.filename, 'wb')
+        _file.write(binary_song.content)
+        _file.close()
+
+    @staticmethod
+    def download(prepped, filename):
+        queue = Queue()
+        queue.put(prepped)
+  
+        t = Downloader(queue, filename)
+        t.start()
+
+        queue.join()
 
 
 class BaseService(object):
@@ -62,17 +105,15 @@ class BaseService(object):
         return map(self._prepare_song, results)
 
     def _save_song_in_cache(self, song):
-        binary_song = self._get_media_file(song.source)
-        if binary_song:
+        prepped = self._get_media_file(song.source)
+        if prepped:
             cache_name = str(uuid.uuid4()) + '.mp3'
 
             full_path = '%s%s' % (settings.CACHE_PATH, cache_name)
-            _file = open(full_path, 'wb')
-            _file.write(binary_song)
-            _file.close()
-
+            Downloader.download(prepped, full_path)
             song.cache_name = cache_name
             song.save()
+
 
     def search_in_cache(self, query):
         """

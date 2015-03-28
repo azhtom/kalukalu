@@ -15,11 +15,11 @@ urls = [
         PlaySongController,
         name='play_song_service'
     ),
-    url(
-        '/discover',
-        DiscoverController,
-        name='discover_service'
-    ),
+    #url(
+    #    '/discover',
+    #    DiscoverController,
+    #    name='discover_service'
+    #),
     url(
         '/cache/(.*)',
         CacheController,

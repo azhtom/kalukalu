@@ -169,11 +169,6 @@ class GSService(services.BaseService):
             })
 
             return req.prepare()
-
-            #r = requests.post(uri, headers=headers, 
-            #    data=json.dumps(data))
-            #if r.status_code == requests.codes.ok:
-            #    return r.content
         return None
 
     def _get_media_file(self, gs_song_id):
@@ -190,7 +185,6 @@ class GSService(services.BaseService):
             Connect to Grooveshark to receive a token.
             If result is None, it will be impossible to use the gs api.
         """
-        print self.session.token, "TKN! CONNECT"
         if not self.session.token:
             data = {'secretKey': self._get_secret_key()}
             rcall = self._call('getCommunicationToken', data)

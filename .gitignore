@@ -58,3 +58,6 @@ docs/_build/
 # PyBuilder
 target/
 *cache*
+local_settings.py
+*.rdb
+*.DS_Store

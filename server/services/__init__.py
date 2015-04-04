@@ -114,7 +114,6 @@ class BaseService(object):
             song.cache_name = cache_name
             song.save()
 
-
     def search_in_cache(self, query):
         """
             Search on local database

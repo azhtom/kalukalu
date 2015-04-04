@@ -1,0 +1,6 @@
+# -*- coding: utf8 -*-
+
+# YOUTUBE SERVICE
+DEVELOPER_KEY = "__KEY__"
+YOUTUBE_API_SERVICE_NAME = "youtube"
+

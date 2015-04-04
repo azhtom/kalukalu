@@ -1,5 +1,10 @@
 # -*- coding: utf8 -*-
 
+import settings
+
+
+YOUTUBE_API_VERSION = 'v3'
+
 
 class YouTubeService(BaseService):
     """
@@ -12,7 +17,9 @@ class YouTubeService(BaseService):
         pass
 
     def connect(self):
-        pass
+        self.youtube = build(settings.YOUTUBE_API_SERVICE_NAME, 
+                        YOUTUBE_API_VERSION,
+                        developerKey=settings.DEVELOPER_KEY)
 
     def search(self, q):
         pass

@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 
 # YOUTUBE SERVICE
+# Register your app: https://cloud.google.com/console
 DEVELOPER_KEY = "__KEY__"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 
